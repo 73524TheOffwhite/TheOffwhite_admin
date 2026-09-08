@@ -1,0 +1,13 @@
+{
+  "name": "Offwhite Cafe Admin",
+  "short_name": "Offwhite",
+  "description": "Admin panel for Offwhite Cafe — edit content and run floor operations",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F7F2EB",
+  "theme_color": "#8B5B2A",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "64x64 32x32 24x24 16x16", "type": "image/x-icon" }
+  ]
+}
