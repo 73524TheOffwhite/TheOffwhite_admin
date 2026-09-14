@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { ChevronRight, ImagePlus, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,7 +8,6 @@ import {
   Field,
   ImageField,
   ItemToolbar,
-  LinkFields,
   SectionCard,
   moveItem,
   uid,
@@ -17,47 +16,66 @@ import SharedDishesSection from "@/components/cms/SharedDishesSection";
 import {
   DEFAULT_MENU,
   MENU_SECTIONS,
-  type MenuCategory,
-  type MenuItem,
-  type MenuItemStatus,
   type MenuPageContent,
+  type VisualMenuDish,
 } from "@/data/menu-content";
 import { useSharedSignatureDishes } from "@/data/shared-dishes";
-import { activityNoteForSlug, logActivity } from "@/lib/activity-log";
-import { cn } from "@/lib/utils";
-
-const STATUS_OPTIONS: { value: MenuItemStatus; label: string }[] = [
-  { value: "available", label: "Available" },
-  { value: "sold_out", label: "Sold out" },
-  { value: "hidden", label: "Hidden" },
-];
+import { loadMenuCms, saveMenuCms } from "@/lib/menu-cms";
+import { toast } from "sonner";
 
 export default function MenuEditor() {
   const [content, setContent] = useState<MenuPageContent>(DEFAULT_MENU);
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(DEFAULT_MENU));
   const [active, setActive] = useState("hero");
-  const [selectedCategoryId, setSelectedCategoryId] = useState(DEFAULT_MENU.aLaCarte.categories[0]?.id ?? "");
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(
-    DEFAULT_MENU.aLaCarte.categories[0]?.items[0]?.id ?? null,
-  );
+  const [pageId, setPageId] = useState<string | undefined>();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [selectedDishId, setSelectedDishId] = useState<string | null>(DEFAULT_MENU.dishes[0]?.id ?? null);
   const { dirty: dishesDirty, save: saveDishes } = useSharedSignatureDishes();
 
   const dirty = JSON.stringify(content) !== savedSnapshot || dishesDirty;
 
-  const selectedCategory = useMemo(
-    () => content.aLaCarte.categories.find((c) => c.id === selectedCategoryId) ?? null,
-    [content.aLaCarte.categories, selectedCategoryId],
-  );
+  const selectedDish =
+    content.dishes.find((d) => d.id === selectedDishId) ?? content.dishes[0] ?? null;
 
-  const selectedItem = useMemo(
-    () => selectedCategory?.items.find((i) => i.id === selectedItemId) ?? null,
-    [selectedCategory, selectedItemId],
-  );
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const bundle = await loadMenuCms();
+        if (cancelled) return;
+        setContent(bundle.content);
+        setSavedSnapshot(JSON.stringify(bundle.content));
+        setPageId(bundle.pageId);
+        setSelectedDishId(bundle.content.dishes[0]?.id ?? null);
+      } catch (err) {
+        if (!cancelled) {
+          toast.error(err instanceof Error ? err.message : "Failed to load Menu from Supabase");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const save = () => {
-    setSavedSnapshot(JSON.stringify(content));
-    saveDishes();
-    void logActivity(activityNoteForSlug("menu"));
+  const save = async () => {
+    setSaving(true);
+    try {
+      await saveMenuCms({ content, pageId });
+      const refreshed = await loadMenuCms();
+      setContent(refreshed.content);
+      setSavedSnapshot(JSON.stringify(refreshed.content));
+      setPageId(refreshed.pageId);
+      saveDishes();
+      toast.success("Menu page saved — live site will use hero, selection header, and dish grid");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save Menu page");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const scrollTo = (id: string) => {
@@ -65,43 +83,31 @@ export default function MenuEditor() {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const updateCategories = (categories: MenuCategory[]) => {
-    setContent((c) => ({ ...c, aLaCarte: { ...c.aLaCarte, categories } }));
+  const updateDishes = (dishes: VisualMenuDish[]) => {
+    setContent((c) => ({ ...c, dishes }));
   };
 
-  const updateCategory = (categoryId: string, patch: Partial<MenuCategory>) => {
-    updateCategories(
-      content.aLaCarte.categories.map((c) => (c.id === categoryId ? { ...c, ...patch } : c)),
-    );
-  };
-
-  const updateItem = (categoryId: string, itemId: string, next: MenuItem) => {
-    updateCategories(
-      content.aLaCarte.categories.map((c) =>
-        c.id === categoryId
-          ? { ...c, items: c.items.map((i) => (i.id === itemId ? next : i)) }
-          : c,
-      ),
-    );
-  };
-
-  const selectCategory = (id: string) => {
-    setSelectedCategoryId(id);
-    const cat = content.aLaCarte.categories.find((c) => c.id === id);
-    setSelectedItemId(cat?.items[0]?.id ?? null);
+  const updateDish = (id: string, patch: Partial<VisualMenuDish>) => {
+    updateDishes(content.dishes.map((d) => (d.id === id ? { ...d, ...patch } : d)));
   };
 
   return (
     <EditorShell
       title="Menu page content"
-      subtitle="Manage à la carte categories, items, and shared signature dishes."
+      subtitle={
+        loading
+          ? "Loading from Supabase…"
+          : saving
+            ? "Saving…"
+            : "Hero, selection header, and dish grid sync to the live Menu page. Footer, modal, and signature dishes are unchanged."
+      }
       dirty={dirty}
-      onSave={save}
+      busy={loading || saving}
+      onSave={() => void save()}
       sections={MENU_SECTIONS}
       active={active}
       onNavigate={scrollTo}
     >
-      {/* 1. Hero */}
       <SectionCard
         id="hero"
         title="Page Hero"
@@ -109,9 +115,14 @@ export default function MenuEditor() {
         priority="Medium"
       >
         <ImageField
-          label="Image"
+          label="Desktop image"
           value={content.hero.image}
           onChange={(image) => setContent((c) => ({ ...c, hero: { ...c.hero, image } }))}
+        />
+        <ImageField
+          label="Mobile image"
+          value={content.hero.mobileImage}
+          onChange={(mobileImage) => setContent((c) => ({ ...c, hero: { ...c.hero, mobileImage } }))}
         />
         <Field label="Eyebrow">
           <Input
@@ -119,7 +130,7 @@ export default function MenuEditor() {
             onChange={(e) => setContent((c) => ({ ...c, hero: { ...c.hero, eyebrow: e.target.value } }))}
           />
         </Field>
-        <Field label="Headline">
+        <Field label="Headline" hint="Use a line break for two lines on the live site">
           <Textarea
             rows={2}
             value={content.hero.headline}
@@ -145,428 +156,156 @@ export default function MenuEditor() {
         </Field>
       </SectionCard>
 
-      {/* 2. À la Carte */}
       <SectionCard
-        id="alacarte"
-        title="À la Carte"
-        layout="Section header → category tabs → item list → footer note + button"
+        id="selection"
+        title="Selection header"
+        layout="Centered eyebrow · headline · italic intro"
         priority="High"
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Eyebrow">
-            <Input
-              value={content.aLaCarte.eyebrow}
-              onChange={(e) =>
-                setContent((c) => ({ ...c, aLaCarte: { ...c.aLaCarte, eyebrow: e.target.value } }))
-              }
-            />
-          </Field>
-          <Field label="Headline">
-            <Input
-              value={content.aLaCarte.headline}
-              onChange={(e) =>
-                setContent((c) => ({ ...c, aLaCarte: { ...c.aLaCarte, headline: e.target.value } }))
-              }
-            />
-          </Field>
-        </div>
-        <Field label="Tax note">
+        <Field label="Eyebrow">
           <Input
-            value={content.aLaCarte.taxNote}
+            value={content.selection.eyebrow}
             onChange={(e) =>
-              setContent((c) => ({ ...c, aLaCarte: { ...c.aLaCarte, taxNote: e.target.value } }))
+              setContent((c) => ({ ...c, selection: { ...c.selection, eyebrow: e.target.value } }))
             }
           />
         </Field>
-        <LinkFields
-          label="Footer button"
-          value={content.aLaCarte.button}
-          onChange={(button) => setContent((c) => ({ ...c, aLaCarte: { ...c.aLaCarte, button } }))}
-        />
+        <Field label="Headline">
+          <Input
+            value={content.selection.headline}
+            onChange={(e) =>
+              setContent((c) => ({ ...c, selection: { ...c.selection, headline: e.target.value } }))
+            }
+          />
+        </Field>
+        <Field label="Intro" hint="Italic line under the headline">
+          <Input
+            value={content.selection.intro}
+            onChange={(e) =>
+              setContent((c) => ({ ...c, selection: { ...c.selection, intro: e.target.value } }))
+            }
+          />
+        </Field>
+      </SectionCard>
 
-        <div className="rounded-xl border border-border overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-secondary/40 px-3 py-2.5">
-            <p className="text-sm font-medium">Categories & items</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const id = `cat-${uid().slice(0, 8)}`;
-                const next: MenuCategory = {
-                  id,
-                  label: "New category",
-                  intro: "",
-                  items: [],
-                };
-                updateCategories([...content.aLaCarte.categories, next]);
-                setSelectedCategoryId(id);
-                setSelectedItemId(null);
-              }}
-            >
-              <Plus className="h-4 w-4" /> Add category
-            </Button>
-          </div>
+      <SectionCard
+        id="visual"
+        title="Dish grid"
+        layout="Visual menu — image + name (matches live grid)"
+        priority="High"
+      >
+        <p className="text-xs text-muted-foreground -mt-2">
+          Defaults match the live site assets. Until you upload a new image, the public site keeps using
+          the bundled Menu photos.
+        </p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">{content.dishes.length} dishes</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const id = `dish-${uid().slice(0, 8)}.jpg`;
+              const next: VisualMenuDish = {
+                id,
+                name: "New dish",
+                image: { name: id },
+              };
+              updateDishes([...content.dishes, next]);
+              setSelectedDishId(id);
+            }}
+          >
+            <Plus className="h-4 w-4" /> Add dish
+          </Button>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] min-h-[420px]">
-            {/* Category list */}
-            <aside className="border-b lg:border-b-0 lg:border-r border-border bg-background/50 p-2 space-y-1">
-              {content.aLaCarte.categories.map((cat, index) => (
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4">
+          <ul className="rounded-xl border border-border divide-y divide-border overflow-hidden">
+            {content.dishes.map((dish, index) => (
+              <li key={dish.id}>
                 <div
-                  key={cat.id}
-                  className={cn(
-                    "rounded-xl border transition-colors",
-                    selectedCategoryId === cat.id
-                      ? "border-primary/30 bg-primary/5"
-                      : "border-transparent hover:bg-muted/60",
-                  )}
+                  className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors ${
+                    selectedDishId === dish.id ? "bg-primary/5" : "hover:bg-muted/40"
+                  }`}
+                  onClick={() => setSelectedDishId(dish.id)}
                 >
-                  <button
-                    type="button"
-                    onClick={() => selectCategory(cat.id)}
-                    className="w-full flex items-center gap-2 px-2.5 py-2 text-left"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{cat.label}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {cat.items.length} item{cat.items.length === 1 ? "" : "s"}
-                      </p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                  </button>
-                  <div className="flex justify-end px-1 pb-1">
+                  <div className="h-12 w-10 rounded-md overflow-hidden bg-muted shrink-0 grid place-items-center">
+                    {dish.image.previewUrl ? (
+                      <img src={dish.image.previewUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-[8px] text-muted-foreground px-0.5 text-center leading-tight">
+                        {dish.image.name}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{dish.name}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{dish.image.name}</p>
+                  </div>
+                  <div onClick={(e) => e.stopPropagation()}>
                     <ItemToolbar
-                      onUp={() => {
-                        const next = moveItem(content.aLaCarte.categories, index, -1);
-                        updateCategories(next);
-                      }}
-                      onDown={() => {
-                        const next = moveItem(content.aLaCarte.categories, index, 1);
-                        updateCategories(next);
-                      }}
+                      onUp={() => updateDishes(moveItem(content.dishes, index, -1))}
+                      onDown={() => updateDishes(moveItem(content.dishes, index, 1))}
                       onRemove={() => {
-                        const next = content.aLaCarte.categories.filter((c) => c.id !== cat.id);
-                        updateCategories(next);
-                        if (selectedCategoryId === cat.id) {
-                          setSelectedCategoryId(next[0]?.id ?? "");
-                          setSelectedItemId(next[0]?.items[0]?.id ?? null);
-                        }
+                        const next = content.dishes.filter((d) => d.id !== dish.id);
+                        updateDishes(next);
+                        if (selectedDishId === dish.id) setSelectedDishId(next[0]?.id ?? null);
                       }}
                       disableUp={index === 0}
-                      disableDown={index === content.aLaCarte.categories.length - 1}
+                      disableDown={index === content.dishes.length - 1}
                     />
                   </div>
                 </div>
-              ))}
-              {content.aLaCarte.categories.length === 0 ? (
-                <p className="text-xs text-muted-foreground px-2 py-4">No categories yet.</p>
-              ) : null}
-            </aside>
+              </li>
+            ))}
+            {content.dishes.length === 0 ? (
+              <li className="px-3 py-8 text-center text-xs text-muted-foreground">No dishes yet.</li>
+            ) : null}
+          </ul>
 
-            {/* Category + items workspace */}
-            <div className="p-3 sm:p-4 space-y-4 min-w-0">
-              {selectedCategory ? (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <Field label="Category ID">
-                      <Input
-                        value={selectedCategory.id}
-                        onChange={(e) => {
-                          const nextId = e.target.value.trim() || selectedCategory.id;
-                          updateCategories(
-                            content.aLaCarte.categories.map((c) =>
-                              c.id === selectedCategory.id ? { ...c, id: nextId } : c,
-                            ),
-                          );
-                          setSelectedCategoryId(nextId);
-                        }}
-                      />
-                    </Field>
-                    <Field label="Label">
-                      <Input
-                        value={selectedCategory.label}
-                        onChange={(e) => updateCategory(selectedCategory.id, { label: e.target.value })}
-                      />
-                    </Field>
-                    <Field label="Intro">
-                      <Input
-                        value={selectedCategory.intro}
-                        onChange={(e) => updateCategory(selectedCategory.id, { intro: e.target.value })}
-                      />
-                    </Field>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium">Items</p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const newItem: MenuItem = {
-                          id: uid(),
-                          name: "New dish",
-                          notes: "",
-                          price: "₹ 0",
-                          image: { name: "dish-ravioli.jpg" },
-                          blurb: "",
-                          preparation: "",
-                          pairing: "",
-                          allergens: "",
-                          status: "available",
-                        };
-                        updateCategory(selectedCategory.id, {
-                          items: [...selectedCategory.items, newItem],
-                        });
-                        setSelectedItemId(newItem.id);
-                      }}
-                    >
-                      <Plus className="h-4 w-4" /> Add item
-                    </Button>
-                  </div>
-
-                  {/* Items table */}
-                  <div className="rounded-xl border border-border overflow-hidden">
-                    <div className="hidden sm:grid grid-cols-[minmax(0,1.4fr)_80px_72px_100px_88px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted/40 border-b border-border">
-                      <span>Name</span>
-                      <span>Price</span>
-                      <span>Image</span>
-                      <span>Status</span>
-                      <span className="text-right">Order</span>
-                    </div>
-                    <ul className="divide-y divide-border">
-                      {selectedCategory.items.map((menuItem, index) => (
-                        <li key={menuItem.id}>
-                          <div
-                            className={cn(
-                              "grid grid-cols-1 sm:grid-cols-[minmax(0,1.4fr)_80px_72px_100px_88px] gap-2 px-3 py-2.5 items-center cursor-pointer transition-colors",
-                              selectedItemId === menuItem.id ? "bg-primary/5" : "hover:bg-muted/40",
-                            )}
-                            onClick={() => setSelectedItemId(menuItem.id)}
-                          >
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium truncate">{menuItem.name}</p>
-                              <p className="text-[11px] text-muted-foreground truncate">{menuItem.notes}</p>
-                            </div>
-                            <p className="text-sm font-semibold">{menuItem.price}</p>
-                            <div className="h-9 w-12 rounded-md overflow-hidden bg-muted grid place-items-center">
-                              {menuItem.image.previewUrl ? (
-                                <img src={menuItem.image.previewUrl} alt="" className="h-full w-full object-cover" />
-                              ) : (
-                                <span className="text-[9px] text-muted-foreground truncate px-0.5">
-                                  {menuItem.image.name.split(".")[0]}
-                                </span>
-                              )}
-                            </div>
-                            <StatusBadge status={menuItem.status} />
-                            <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-                              <ItemToolbar
-                                onUp={() =>
-                                  updateCategory(selectedCategory.id, {
-                                    items: moveItem(selectedCategory.items, index, -1),
-                                  })
-                                }
-                                onDown={() =>
-                                  updateCategory(selectedCategory.id, {
-                                    items: moveItem(selectedCategory.items, index, 1),
-                                  })
-                                }
-                                onRemove={() => {
-                                  const items = selectedCategory.items.filter((i) => i.id !== menuItem.id);
-                                  updateCategory(selectedCategory.id, { items });
-                                  if (selectedItemId === menuItem.id) {
-                                    setSelectedItemId(items[0]?.id ?? null);
-                                  }
-                                }}
-                                disableUp={index === 0}
-                                disableDown={index === selectedCategory.items.length - 1}
-                              />
-                            </div>
-                          </div>
-                        </li>
-                      ))}
-                      {selectedCategory.items.length === 0 ? (
-                        <li className="px-3 py-6 text-xs text-muted-foreground text-center">
-                          No items in this category.
-                        </li>
-                      ) : null}
-                    </ul>
-                  </div>
-
-                  {/* Item detail form */}
-                  {selectedItem ? (
-                    <div className="rounded-xl border border-border bg-secondary/20 p-3 sm:p-4 space-y-4">
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-semibold">Item detail</p>
-                          <p className="text-xs text-muted-foreground">
-                            List shows name, notes, price. Modal uses all fields below.
-                          </p>
-                        </div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          {selectedCategory.label}
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <Field label="Name">
-                          <Input
-                            value={selectedItem.name}
-                            onChange={(e) =>
-                              updateItem(selectedCategory.id, selectedItem.id, {
-                                ...selectedItem,
-                                name: e.target.value,
-                              })
-                            }
-                          />
-                        </Field>
-                        <Field label="Price">
-                          <Input
-                            value={selectedItem.price}
-                            onChange={(e) =>
-                              updateItem(selectedCategory.id, selectedItem.id, {
-                                ...selectedItem,
-                                price: e.target.value,
-                              })
-                            }
-                          />
-                        </Field>
-                      </div>
-                      <Field label="Notes">
-                        <Input
-                          value={selectedItem.notes}
-                          onChange={(e) =>
-                            updateItem(selectedCategory.id, selectedItem.id, {
-                              ...selectedItem,
-                              notes: e.target.value,
-                            })
-                          }
-                          placeholder="Aged balsamic · Basil oil · Sea salt"
-                        />
-                      </Field>
-                      <ImageField
-                        label="Image"
-                        value={selectedItem.image}
-                        onChange={(image) =>
-                          updateItem(selectedCategory.id, selectedItem.id, {
-                            ...selectedItem,
-                            image,
-                          })
-                        }
-                      />
-                      <Field label="Blurb" hint="Hover + modal">
-                        <Textarea
-                          rows={2}
-                          value={selectedItem.blurb}
-                          onChange={(e) =>
-                            updateItem(selectedCategory.id, selectedItem.id, {
-                              ...selectedItem,
-                              blurb: e.target.value,
-                            })
-                          }
-                        />
-                      </Field>
-                      <Field label="Preparation" hint="Modal only">
-                        <Textarea
-                          rows={2}
-                          value={selectedItem.preparation}
-                          onChange={(e) =>
-                            updateItem(selectedCategory.id, selectedItem.id, {
-                              ...selectedItem,
-                              preparation: e.target.value,
-                            })
-                          }
-                        />
-                      </Field>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <Field label="Pairing" hint="Perfect pair">
-                          <Input
-                            value={selectedItem.pairing}
-                            onChange={(e) =>
-                              updateItem(selectedCategory.id, selectedItem.id, {
-                                ...selectedItem,
-                                pairing: e.target.value,
-                              })
-                            }
-                          />
-                        </Field>
-                        <Field label="Allergens" hint="Modal only">
-                          <Input
-                            value={selectedItem.allergens}
-                            onChange={(e) =>
-                              updateItem(selectedCategory.id, selectedItem.id, {
-                                ...selectedItem,
-                                allergens: e.target.value,
-                              })
-                            }
-                          />
-                        </Field>
-                      </div>
-                      <Field label="Availability">
-                        <div className="flex flex-wrap gap-2">
-                          {STATUS_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              onClick={() =>
-                                updateItem(selectedCategory.id, selectedItem.id, {
-                                  ...selectedItem,
-                                  status: opt.value,
-                                })
-                              }
-                              className={cn(
-                                "rounded-full px-3 py-1.5 text-xs font-medium border transition-colors",
-                                selectedItem.status === opt.value
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : "bg-card border-border text-foreground/70 hover:bg-muted",
-                              )}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      </Field>
-                    </div>
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-xs text-muted-foreground">
-                      Select an item to edit full detail fields.
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center gap-2 py-16 text-muted-foreground">
-                  <ImagePlus className="h-6 w-6 opacity-50" />
-                  <p className="text-sm">Select or add a category to begin.</p>
-                </div>
-              )}
-            </div>
+          <div className="rounded-xl border border-border bg-secondary/20 p-3 sm:p-4 space-y-3 h-fit">
+            {selectedDish ? (
+              <>
+                <p className="text-sm font-semibold">Dish detail</p>
+                <Field label="Name">
+                  <Input
+                    value={selectedDish.name}
+                    onChange={(e) => updateDish(selectedDish.id, { name: e.target.value })}
+                  />
+                </Field>
+                <Field label="Asset id" hint="Matches live filename when no upload is set">
+                  <Input
+                    value={selectedDish.id}
+                    onChange={(e) => {
+                      const nextId = e.target.value.trim() || selectedDish.id;
+                      updateDishes(
+                        content.dishes.map((d) =>
+                          d.id === selectedDish.id
+                            ? { ...d, id: nextId, image: { ...d.image, name: d.image.name || nextId } }
+                            : d,
+                        ),
+                      );
+                      setSelectedDishId(nextId);
+                    }}
+                  />
+                </Field>
+                <ImageField
+                  label="Image"
+                  value={selectedDish.image}
+                  onChange={(image) => updateDish(selectedDish.id, { image })}
+                />
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground py-6 text-center">Select a dish to edit.</p>
+            )}
           </div>
         </div>
       </SectionCard>
 
-      {/* 3. Shared signature dishes */}
       <SharedDishesSection
         priority="Low"
-        note="Shared source with Homepage — one edit updates both."
+        note="Shared source with Homepage — one edit updates both. Not part of the live Menu page grid."
       />
     </EditorShell>
-  );
-}
-
-function StatusBadge({ status }: { status: MenuItemStatus }) {
-  const map = {
-    available: "bg-emerald-100 text-emerald-700",
-    sold_out: "bg-amber-100 text-amber-800",
-    hidden: "bg-muted text-muted-foreground",
-  } as const;
-  const label = {
-    available: "Available",
-    sold_out: "Sold out",
-    hidden: "Hidden",
-  } as const;
-  return (
-    <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold", map[status])}>
-      {label[status]}
-    </span>
   );
 }
