@@ -83,7 +83,7 @@ export default function Level4Editor() {
           ? "Loading from Supabase…"
           : saving
             ? "Saving…"
-            : "Hero collage, mood block, and fine-dining story for the Level 4 page."
+            : "Hero, mood, story, linger strip, and evening close for Level 4."
       }
       dirty={dirty}
       busy={loading || saving}
@@ -323,6 +323,164 @@ export default function Level4Editor() {
             </div>
           ))}
         </div>
+      </SectionCard>
+
+      <SectionCard
+        id="linger"
+        title="Linger strip"
+        layout="Inside Level 4 — three arched moments"
+        priority="High"
+      >
+        <p className="text-xs text-muted-foreground -mt-2">
+          Matches live “Linger a little longer.” Until you upload new photos, the public site keeps the
+          current Level 4 gallery images.
+        </p>
+        <Field label="Eyebrow">
+          <Input
+            value={content.linger.eyebrow}
+            onChange={(e) =>
+              setContent((c) => ({ ...c, linger: { ...c.linger, eyebrow: e.target.value } }))
+            }
+          />
+        </Field>
+        <Field label="Headline">
+          <Input
+            value={content.linger.headline}
+            onChange={(e) =>
+              setContent((c) => ({ ...c, linger: { ...c.linger, headline: e.target.value } }))
+            }
+          />
+        </Field>
+        <Field label="Supporting line">
+          <Textarea
+            rows={2}
+            value={content.linger.body}
+            onChange={(e) =>
+              setContent((c) => ({ ...c, linger: { ...c.linger, body: e.target.value } }))
+            }
+          />
+        </Field>
+        <div className="space-y-3">
+          {content.linger.moments.map((moment) => (
+            <div key={moment.id} className="rounded-xl border border-border p-3 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {moment.id}
+              </p>
+              <Field label="Label">
+                <Input
+                  value={moment.label}
+                  onChange={(e) =>
+                    setContent((c) => ({
+                      ...c,
+                      linger: {
+                        ...c.linger,
+                        moments: c.linger.moments.map((m) =>
+                          m.id === moment.id ? { ...m, label: e.target.value } : m,
+                        ),
+                      },
+                    }))
+                  }
+                />
+              </Field>
+              <Field label="Alt text">
+                <Input
+                  value={moment.alt}
+                  onChange={(e) =>
+                    setContent((c) => ({
+                      ...c,
+                      linger: {
+                        ...c.linger,
+                        moments: c.linger.moments.map((m) =>
+                          m.id === moment.id ? { ...m, alt: e.target.value } : m,
+                        ),
+                      },
+                    }))
+                  }
+                />
+              </Field>
+              <ImageField
+                label="Image"
+                value={moment.image}
+                onChange={(image) =>
+                  setContent((c) => ({
+                    ...c,
+                    linger: {
+                      ...c.linger,
+                      moments: c.linger.moments.map((m) =>
+                        m.id === moment.id ? { ...m, image } : m,
+                      ),
+                    },
+                  }))
+                }
+              />
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        id="evening"
+        title="Evening close"
+        layout="Cinematic close — copy + reserve card (background uses bar collage)"
+        priority="High"
+      >
+        <Field label="Headline" hint="Use a line break for two lines on the live site">
+          <Textarea
+            rows={2}
+            value={content.evening.headline}
+            onChange={(e) =>
+              setContent((c) => ({ ...c, evening: { ...c.evening, headline: e.target.value } }))
+            }
+          />
+        </Field>
+        <Field label="Body">
+          <Textarea
+            rows={3}
+            value={content.evening.body}
+            onChange={(e) =>
+              setContent((c) => ({ ...c, evening: { ...c.evening, body: e.target.value } }))
+            }
+          />
+        </Field>
+        <StringListEditor
+          title="Tags"
+          values={content.evening.tags}
+          onChange={(tags) => setContent((c) => ({ ...c, evening: { ...c.evening, tags } }))}
+          addLabel="Add tag"
+        />
+        <Field label="Card eyebrow">
+          <Input
+            value={content.evening.cardEyebrow}
+            onChange={(e) =>
+              setContent((c) => ({ ...c, evening: { ...c.evening, cardEyebrow: e.target.value } }))
+            }
+          />
+        </Field>
+        <Field label="Card body">
+          <Textarea
+            rows={3}
+            value={content.evening.cardBody}
+            onChange={(e) =>
+              setContent((c) => ({ ...c, evening: { ...c.evening, cardBody: e.target.value } }))
+            }
+          />
+        </Field>
+        <Field label="CTA label">
+          <Input
+            value={content.evening.ctaLabel}
+            onChange={(e) =>
+              setContent((c) => ({ ...c, evening: { ...c.evening, ctaLabel: e.target.value } }))
+            }
+          />
+        </Field>
+        <Field label="Sign-off">
+          <Input
+            value={content.evening.signOff}
+            onChange={(e) =>
+              setContent((c) => ({ ...c, evening: { ...c.evening, signOff: e.target.value } }))
+            }
+          />
+        </Field>
       </SectionCard>
     </EditorShell>
   );

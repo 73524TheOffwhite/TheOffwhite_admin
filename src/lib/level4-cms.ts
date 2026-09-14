@@ -1,5 +1,10 @@
 import type { MediaRef } from "@/data/homepage-content";
-import { DEFAULT_LEVEL4, type CollageImageSlot, type Level4Content } from "@/data/level4-content";
+import {
+  DEFAULT_LEVEL4,
+  type CollageImageSlot,
+  type Level4Content,
+  type LingerMoment,
+} from "@/data/level4-content";
 import { activityNoteForSlug, logActivity } from "@/lib/activity-log";
 import { optimizedMediaUrl, publicMediaUrl } from "@/lib/media";
 import { supabase } from "@/lib/supabase";
@@ -18,6 +23,8 @@ type Level4Sections = {
   };
   mood?: Level4Content["mood"];
   story?: Level4Content["story"];
+  linger?: Level4Content["linger"];
+  evening?: Level4Content["evening"];
 };
 
 type PageContentRow = {
@@ -74,6 +81,21 @@ function mapCollage(slots: CollageImageSlot[] | undefined): CollageImageSlot[] {
   });
 }
 
+function mapLingerMoments(moments: LingerMoment[] | undefined): LingerMoment[] {
+  const byId = new Map((moments ?? []).map((moment) => [moment.id, moment]));
+  return DEFAULT_LEVEL4.linger.moments.map((fallback) => {
+    const moment = byId.get(fallback.id) || fallback;
+    return {
+      ...fallback,
+      ...moment,
+      id: fallback.id,
+      label: moment.label || fallback.label,
+      alt: moment.alt || fallback.alt,
+      image: asMedia(moment.image, fallback.image.name),
+    };
+  });
+}
+
 export async function loadLevel4Cms(): Promise<Level4CmsBundle> {
   const { data: page, error } = await supabase
     .from("page_content")
@@ -125,6 +147,21 @@ export async function loadLevel4Cms(): Promise<Level4CmsBundle> {
         ? sections.story.features
         : DEFAULT_LEVEL4.story.features,
     },
+    linger: {
+      eyebrow: sections.linger?.eyebrow || DEFAULT_LEVEL4.linger.eyebrow,
+      headline: sections.linger?.headline || DEFAULT_LEVEL4.linger.headline,
+      body: sections.linger?.body || DEFAULT_LEVEL4.linger.body,
+      moments: mapLingerMoments(sections.linger?.moments),
+    },
+    evening: {
+      headline: sections.evening?.headline || DEFAULT_LEVEL4.evening.headline,
+      body: sections.evening?.body || DEFAULT_LEVEL4.evening.body,
+      tags: sections.evening?.tags?.length ? sections.evening.tags : DEFAULT_LEVEL4.evening.tags,
+      cardEyebrow: sections.evening?.cardEyebrow || DEFAULT_LEVEL4.evening.cardEyebrow,
+      cardBody: sections.evening?.cardBody || DEFAULT_LEVEL4.evening.cardBody,
+      ctaLabel: sections.evening?.ctaLabel || DEFAULT_LEVEL4.evening.ctaLabel,
+      signOff: sections.evening?.signOff || DEFAULT_LEVEL4.evening.signOff,
+    },
   };
 
   return { content, pageId: row?.id };
@@ -142,6 +179,14 @@ export async function saveLevel4Cms(bundle: Level4CmsBundle) {
     },
     mood: bundle.content.mood,
     story: bundle.content.story,
+    linger: {
+      ...bundle.content.linger,
+      moments: bundle.content.linger.moments.map((moment) => ({
+        ...moment,
+        image: serializeMedia(moment.image),
+      })),
+    },
+    evening: bundle.content.evening,
   };
 
   const pagePayload = {

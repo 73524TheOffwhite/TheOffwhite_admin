@@ -7,6 +7,13 @@ export type CollageImageSlot = {
   alt: string;
 };
 
+export type LingerMoment = {
+  id: "dining-room" | "lounge" | "bar";
+  label: string;
+  image: MediaRef;
+  alt: string;
+};
+
 export type Level4Content = {
   hero: {
     eyebrow: string;
@@ -26,12 +33,29 @@ export type Level4Content = {
     paragraphs: string[];
     features: { id: string; label: string }[];
   };
+  linger: {
+    eyebrow: string;
+    headline: string;
+    body: string;
+    moments: LingerMoment[];
+  };
+  evening: {
+    headline: string;
+    body: string;
+    tags: string[];
+    cardEyebrow: string;
+    cardBody: string;
+    ctaLabel: string;
+    signOff: string;
+  };
 };
 
 export const LEVEL4_SECTIONS = [
   { id: "hero", label: "Hero & collage", priority: "High" as const },
   { id: "mood", label: "Mood block", priority: "Medium" as const },
   { id: "story", label: "Story & features", priority: "High" as const },
+  { id: "linger", label: "Linger strip", priority: "High" as const },
+  { id: "evening", label: "Evening close", priority: "High" as const },
 ] as const;
 
 export const DEFAULT_LEVEL4: Level4Content = {
@@ -87,5 +111,40 @@ export const DEFAULT_LEVEL4: Level4Content = {
       { id: "f-3", label: "Craft Cocktail Bar" },
       { id: "f-4", label: "Tandoor & Global Kitchen" },
     ],
+  },
+  linger: {
+    eyebrow: "Inside Level 4",
+    headline: "Linger a little longer",
+    body: "Soft light, woven shadows, and rooms that invite you to stay.",
+    moments: [
+      {
+        id: "dining-room",
+        label: "The Dining Room",
+        image: { name: "ChatGPT Image Jun 19, 2026, 05_29_19 PM.jpg" },
+        alt: "Candlelit Level 4 dining table with woven pendants",
+      },
+      {
+        id: "lounge",
+        label: "The Lounge",
+        image: { name: "ChatGPT Image Jun 19, 2026, 04_52_45 PM.jpg" },
+        alt: "Level 4 lounge corner with rattan chair and pendant light",
+      },
+      {
+        id: "bar",
+        label: "The Bar",
+        image: { name: "ChatGPT Image Jun 19, 2026, 04_49_41 PM.jpg" },
+        alt: "Level 4 bar with bamboo cladding and warm bottle display",
+      },
+    ],
+  },
+  evening: {
+    headline: "The evening\nis waiting.",
+    body: "Slow dinners. Soft light. Conversations that deserve time — and a table of their own.",
+    tags: ["Dinner", "Cocktails", "Conversation"],
+    cardEyebrow: "Reserve your evening",
+    cardBody:
+      "Join us on Level 4 for an unhurried night — crafted plates, considered pours, and company that stays with you.",
+    ctaLabel: "Reserve a Table",
+    signOff: "We look forward to hosting you.",
   },
 };
