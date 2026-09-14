@@ -1,6 +1,7 @@
 import {
   DEFAULT_ABOUT,
   type AboutContent,
+  type FounderCard,
   type SlideImage,
 } from "@/data/about-content";
 import type { MediaRef } from "@/data/homepage-content";
@@ -86,6 +87,36 @@ function serializeSlides(slides: SlideImage[]): SlideImage[] {
   }));
 }
 
+function mapFounderCards(
+  cards: FounderCard[] | undefined,
+  fallback: FounderCard[],
+): FounderCard[] {
+  const source = cards?.length ? cards : fallback;
+  return source.map((card) => {
+    const legacyUrl = (card as FounderCard & { imageUrl?: string }).imageUrl;
+    const raw =
+      card.image ||
+      (legacyUrl
+        ? {
+            name: legacyUrl.split("/").pop() || "founder.jpg",
+            path: legacyUrl,
+          }
+        : null);
+    const hasMedia = Boolean(raw && (raw.path || raw.previewUrl));
+    return {
+      ...card,
+      image: hasMedia ? asMedia(raw, raw?.name || "founder.jpg") : undefined,
+    };
+  });
+}
+
+function serializeFounderCards(cards: FounderCard[]): FounderCard[] {
+  return cards.map((card) => ({
+    ...card,
+    image: card.image ? serializeMedia(card.image) : undefined,
+  }));
+}
+
 export async function loadAboutCms(): Promise<AboutCmsBundle> {
   const [{ data: page, error: pageError }, { data: reviewRows, error: reviewError }, { data: settings }] =
     await Promise.all([
@@ -124,7 +155,10 @@ export async function loadAboutCms(): Promise<AboutCmsBundle> {
       ...(sections.philosophy || DEFAULT_ABOUT.philosophy),
       slides: mapSlides(sections.philosophy?.slides, DEFAULT_ABOUT.philosophy.slides),
     },
-    founders: sections.founders || DEFAULT_ABOUT.founders,
+    founders: {
+      ...(sections.founders || DEFAULT_ABOUT.founders),
+      cards: mapFounderCards(sections.founders?.cards, DEFAULT_ABOUT.founders.cards),
+    },
     values: sections.values || DEFAULT_ABOUT.values,
     stats: sections.stats || DEFAULT_ABOUT.stats,
     kitchen: {
@@ -171,7 +205,10 @@ export async function saveAboutCms(bundle: AboutCmsBundle) {
       ...bundle.content.philosophy,
       slides: serializeSlides(bundle.content.philosophy.slides),
     },
-    founders: bundle.content.founders,
+    founders: {
+      ...bundle.content.founders,
+      cards: serializeFounderCards(bundle.content.founders.cards),
+    },
     values: bundle.content.values,
     stats: bundle.content.stats,
     kitchen: {

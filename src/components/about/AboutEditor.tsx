@@ -605,6 +605,12 @@ function FounderEditor({
           <Input value={card.role} onChange={(e) => onChange({ ...card, role: e.target.value })} />
         </Field>
       </div>
+      <ImageField
+        label="Portrait photo"
+        folder="about/founders"
+        value={card.image || { name: "founder.jpg" }}
+        onChange={(image) => onChange({ ...card, image })}
+      />
       <StringListEditor
         title="Paragraphs"
         addLabel="Add paragraph"
@@ -612,6 +618,11 @@ function FounderEditor({
         values={card.paragraphs}
         onChange={(paragraphs) => onChange({ ...card, paragraphs })}
       />
+      <p className="text-[11px] text-muted-foreground leading-relaxed">
+        Portrait + name/role save to the live About page. Listing preview uses these paragraphs.
+        Detail pages at <code className="text-[10px]">/about/…</code> use these paragraphs when they
+        are at least as complete as the built-in bio; otherwise the live long-form story stays.
+      </p>
     </div>
   );
 }

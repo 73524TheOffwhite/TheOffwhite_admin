@@ -78,7 +78,7 @@ export type HomepageContent = {
 export const DEFAULT_HOMEPAGE: HomepageContent = {
   hero: {
     image: { name: "hero.jpg" },
-    eyebrow: "Fine Dining · Crafted Cocktails · Mediterranean Soul",
+    eyebrow: "Fine Dining · Crafted Cocktails · Global Soul",
     headline: "Where Architecture / Meets Cuisine",
     button1: { label: "Reserve a Table", href: "/events" },
     button2: { label: "View Menu", href: "#menu" },
@@ -88,8 +88,8 @@ export const DEFAULT_HOMEPAGE: HomepageContent = {
   story: {
     image: { name: "story-arch.jpg" },
     eyebrow: "Our Story",
-    headline: "Inspired by Mediterranean Living & Timeless Design",
-    body: "The Off White Bar & Grill is more than a restaurant. It is a gathering place shaped by Mediterranean living, warm hospitality, and architecture that invites you to stay a little longer.",
+    headline: "Inspired by Global Living & Timeless Design",
+    body: "The Off White Bar & Grill is more than a restaurant. It is a gathering place shaped by Global living, warm hospitality, and architecture that invites you to stay a little longer.",
     button: { label: "Discover Our Story", href: "/about" },
   },
   space: {

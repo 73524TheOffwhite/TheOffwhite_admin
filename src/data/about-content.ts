@@ -11,6 +11,8 @@ export type FounderCard = {
   name: string;
   role: string;
   paragraphs: string[];
+  /** Portrait shown on About listing (and detail page once main site prefers CMS). */
+  image?: MediaRef;
 };
 
 export type ValueCard = {
@@ -82,16 +84,15 @@ export const DEFAULT_ABOUT: AboutContent = {
     eyebrow: "Our Story",
     headline: "A Quiet Devotion / to Detail",
     description:
-      "The Off White began as a shared dream — a place where Mediterranean soul meets Goan warmth, set among arches and quiet light in Navelim, South Goa.",
+      "The Off White began as a shared dream shaped by global hospitality, culinary craft and Goan warmth. Today, it is a destination in the heart of Navelim, South Goa.",
     breadcrumb: "About",
   },
   philosophy: {
     eyebrow: "Our Philosophy",
-    headline: "Cooking the way the coast remembers it.",
-    body1:
-      "We source quietly — small fishermen at dawn, farms that still know the names of their soil, bakers who start before the village wakes. Nothing loud. Nothing rushed.",
+    headline: "To serve outstanding food in beautifully created spaces",
+    body1: "",
     body2:
-      "The kitchen is led by a small team who cook as if every plate will be remembered. Technique matters. Restraint matters more.",
+      "The kitchen is led by a small team who believe that restraint is the highest form of generosity. We season with intent. We plate with patience. We let the produce speak.",
     slides: [
       {
         id: "phil-1",
@@ -173,18 +174,18 @@ export const DEFAULT_ABOUT: AboutContent = {
     cards: [
       {
         id: "val-1",
-        title: "Mediterranean Soul",
-        body: "Sun-soaked flavours, olive oil, citrus, and herbs — cooking that feels warm, generous, and unhurried.",
+        title: "Global Soul",
+        body: "Worldly flavours, slow afternoons, generous hospitality. Every plate carries a memory of the journey.",
       },
       {
         id: "val-2",
-        title: "Crafted by Hand",
-        body: "From the breads we bake to the sauces we finish to order, craft is not a flourish. It is the method.",
+        title: "Crafted by hand",
+        body: "Every plate is cooked with attention, every cocktail made to perfection. Every detail is designed, not assembled.",
       },
       {
         id: "val-3",
         title: "Architecture of Calm",
-        body: "Arches, lime-washed walls, and soft light create a room that asks you to breathe slower.",
+        body: "Arches, lime-washed walls, warm light. The room is the first course.",
       },
     ],
   },
