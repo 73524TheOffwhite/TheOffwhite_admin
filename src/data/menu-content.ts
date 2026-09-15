@@ -28,7 +28,6 @@ export const MENU_SECTIONS = [
   { id: "hero", label: "Page Hero", priority: "Medium" as const },
   { id: "selection", label: "Selection header", priority: "High" as const },
   { id: "visual", label: "Dish grid", priority: "High" as const },
-  { id: "dishes", label: "Signature Dishes", priority: "Low" as const },
 ] as const;
 
 /** Same display-name transform as the live Menu page. */

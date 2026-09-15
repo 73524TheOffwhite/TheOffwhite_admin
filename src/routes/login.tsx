@@ -104,13 +104,6 @@ function LoginPage() {
           <Button type="submit" className="w-full" disabled={submitting || !configured}>
             {submitting ? "Signing in…" : "Sign in"}
           </Button>
-
-          <p className="text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <Link to="/signup" className="text-primary font-medium hover:underline">
-              Sign up
-            </Link>
-          </p>
         </form>
       </div>
     </div>

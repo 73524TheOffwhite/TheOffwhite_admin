@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UsersRouteImport } from './routes/users'
 import { Route as TheSpaceRouteImport } from './routes/the-space'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -29,6 +30,11 @@ import { Route as OperationsReservationsRouteImport } from './routes/operations.
 import { Route as OperationsOrdersRouteImport } from './routes/operations.orders'
 import { Route as OperationsMessagesRouteImport } from './routes/operations.messages'
 
+const UsersRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TheSpaceRoute = TheSpaceRouteImport.update({
   id: '/the-space',
   path: '/the-space',
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/the-space': typeof TheSpaceRoute
+  '/users': typeof UsersRoute
   '/operations/messages': typeof OperationsMessagesRoute
   '/operations/orders': typeof OperationsOrdersRoute
   '/operations/reservations': typeof OperationsReservationsRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/the-space': typeof TheSpaceRoute
+  '/users': typeof UsersRoute
   '/operations/messages': typeof OperationsMessagesRoute
   '/operations/orders': typeof OperationsOrdersRoute
   '/operations/reservations': typeof OperationsReservationsRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/the-space': typeof TheSpaceRoute
+  '/users': typeof UsersRoute
   '/operations/messages': typeof OperationsMessagesRoute
   '/operations/orders': typeof OperationsOrdersRoute
   '/operations/reservations': typeof OperationsReservationsRoute
@@ -208,6 +217,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/the-space'
+    | '/users'
     | '/operations/messages'
     | '/operations/orders'
     | '/operations/reservations'
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/the-space'
+    | '/users'
     | '/operations/messages'
     | '/operations/orders'
     | '/operations/reservations'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/the-space'
+    | '/users'
     | '/operations/messages'
     | '/operations/orders'
     | '/operations/reservations'
@@ -272,6 +284,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   TheSpaceRoute: typeof TheSpaceRoute
+  UsersRoute: typeof UsersRoute
   OperationsMessagesRoute: typeof OperationsMessagesRoute
   OperationsOrdersRoute: typeof OperationsOrdersRoute
   OperationsReservationsRoute: typeof OperationsReservationsRoute
@@ -279,6 +292,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/the-space': {
       id: '/the-space'
       path: '/the-space'
@@ -432,6 +452,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   TheSpaceRoute: TheSpaceRoute,
+  UsersRoute: UsersRoute,
   OperationsMessagesRoute: OperationsMessagesRoute,
   OperationsOrdersRoute: OperationsOrdersRoute,
   OperationsReservationsRoute: OperationsReservationsRoute,

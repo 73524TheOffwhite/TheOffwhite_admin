@@ -12,14 +12,12 @@ import {
   moveItem,
   uid,
 } from "@/components/cms/fields";
-import SharedDishesSection from "@/components/cms/SharedDishesSection";
 import {
   DEFAULT_MENU,
   MENU_SECTIONS,
   type MenuPageContent,
   type VisualMenuDish,
 } from "@/data/menu-content";
-import { useSharedSignatureDishes } from "@/data/shared-dishes";
 import { loadMenuCms, saveMenuCms } from "@/lib/menu-cms";
 import { toast } from "sonner";
 
@@ -31,9 +29,8 @@ export default function MenuEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedDishId, setSelectedDishId] = useState<string | null>(DEFAULT_MENU.dishes[0]?.id ?? null);
-  const { dirty: dishesDirty, save: saveDishes } = useSharedSignatureDishes();
 
-  const dirty = JSON.stringify(content) !== savedSnapshot || dishesDirty;
+  const dirty = JSON.stringify(content) !== savedSnapshot;
 
   const selectedDish =
     content.dishes.find((d) => d.id === selectedDishId) ?? content.dishes[0] ?? null;
@@ -69,7 +66,6 @@ export default function MenuEditor() {
       setContent(refreshed.content);
       setSavedSnapshot(JSON.stringify(refreshed.content));
       setPageId(refreshed.pageId);
-      saveDishes();
       toast.success("Menu page saved — live site will use hero, selection header, and dish grid");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save Menu page");
@@ -99,7 +95,7 @@ export default function MenuEditor() {
           ? "Loading from Supabase…"
           : saving
             ? "Saving…"
-            : "Hero, selection header, and dish grid sync to the live Menu page. Footer, modal, and signature dishes are unchanged."
+            : "Hero, selection header, and dish grid sync to the live Menu page. Footer and modal are unchanged. Edit Signature Dishes on Homepage."
       }
       dirty={dirty}
       busy={loading || saving}
@@ -301,11 +297,6 @@ export default function MenuEditor() {
           </div>
         </div>
       </SectionCard>
-
-      <SharedDishesSection
-        priority="Low"
-        note="Shared source with Homepage — one edit updates both. Not part of the live Menu page grid."
-      />
     </EditorShell>
   );
 }

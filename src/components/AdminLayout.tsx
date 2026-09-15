@@ -2,9 +2,10 @@ import { useState, createContext, useContext, useEffect, useMemo, useRef } from 
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  LayoutDashboard, Globe, BookOpen, Coffee, Building2, Images, CalendarDays, Users,
-  Image as ImageIcon, Settings, LogOut, Search, Layers, Mail, Home,
+  LayoutDashboard, Globe, BookOpen, Coffee, Building2, Images, CalendarDays,
+  Settings, LogOut, Search, Layers, Mail, Home,
   Menu as MenuIcon, X, PanelLeftOpen, PanelLeftClose, Pencil, ChevronDown, History, Clock,
+  UserCog,
   type LucideIcon,
 } from "lucide-react";
 import logo from "@/assets/logo-light.png";
@@ -28,15 +29,14 @@ const EDIT_NAV = [
   { icon: Layers, label: "Level 4", to: "/level-4" as const },
   { icon: Layers, label: "Level 5", to: "/level-5" as const },
   { icon: Mail, label: "Contact", to: "/contact" as const },
-  { icon: Users, label: "Customers" },
-  { icon: ImageIcon, label: "Content" },
+  { icon: UserCog, label: "Users", to: "/users" as const },
   { icon: Settings, label: "Settings", to: "/settings" as const },
 ];
 
 type SearchPage = {
   icon: LucideIcon;
   label: string;
-  to: "/" | "/homepage" | "/about" | "/menu" | "/the-space" | "/gallery" | "/reservations" | "/level-4" | "/level-5" | "/contact" | "/settings" | "/activity";
+  to: "/" | "/homepage" | "/about" | "/menu" | "/the-space" | "/gallery" | "/reservations" | "/level-4" | "/level-5" | "/contact" | "/users" | "/settings" | "/activity";
   keywords?: string[];
 };
 
@@ -296,7 +296,7 @@ function Sidebar({
                 className="overflow-hidden flex flex-col gap-0.5 pl-2"
               >
                 {EDIT_NAV.map((item) => {
-                  const active = "to" in item && item.to ? pathname === item.to : false;
+                  const active = pathname === item.to;
                   const className = cn(
                     "relative flex items-center gap-3 h-10 px-3 w-full rounded-xl transition-colors",
                     active
@@ -304,8 +304,14 @@ function Sidebar({
                       : "text-sidebar-foreground hover:bg-white/10",
                   );
 
-                  const inner = (
-                    <>
+                  return (
+                    <Link
+                      key={item.label}
+                      to={item.to}
+                      title={item.label}
+                      onClick={handleNavClick}
+                      className={className}
+                    >
                       {active && (
                         <motion.span
                           layoutId="nav-pill"
@@ -314,27 +320,7 @@ function Sidebar({
                       )}
                       <item.icon className="h-4 w-4 shrink-0 text-white" />
                       <span className="text-sm font-medium truncate text-white">{item.label}</span>
-                    </>
-                  );
-
-                  if ("to" in item && item.to) {
-                    return (
-                      <Link
-                        key={item.label}
-                        to={item.to}
-                        title={item.label}
-                        onClick={handleNavClick}
-                        className={className}
-                      >
-                        {inner}
-                      </Link>
-                    );
-                  }
-
-                  return (
-                    <button key={item.label} type="button" className={className} title={item.label}>
-                      {inner}
-                    </button>
+                    </Link>
                   );
                 })}
               </motion.div>
