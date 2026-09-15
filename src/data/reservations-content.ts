@@ -1,4 +1,4 @@
-import type { LinkButton, MediaRef } from "@/data/homepage-content";
+import type { MediaRef } from "@/data/homepage-content";
 
 export type LocationOption = {
   id: string;
@@ -26,6 +26,7 @@ export type ReservationSubmission = {
   createdAt: string;
 };
 
+/** Full shape kept for CMS round-trip; admin UI only edits live-visible fields. */
 export type ReservationsContent = {
   hero: {
     image: MediaRef;
@@ -72,18 +73,16 @@ export type ReservationsContent = {
   };
 };
 
+/** Admin nav — only what appears on live /events. */
 export const RESERVATIONS_SECTIONS = [
   { id: "hero", label: "Hero", priority: "High" as const },
-  { id: "steps", label: "Step copy", priority: "Medium" as const },
-  { id: "availability", label: "Availability", priority: "High" as const },
-  { id: "locations", label: "Locations & occasions", priority: "High" as const },
-  { id: "success", label: "Success & WhatsApp", priority: "Medium" as const },
-  { id: "inbox", label: "Inbox", priority: "High" as const },
+  { id: "whatsapp", label: "WhatsApp", priority: "High" as const },
 ] as const;
 
+/** Defaults match live theoffwhite.com/events. */
 export const DEFAULT_RESERVATIONS: ReservationsContent = {
   hero: {
-    image: { name: "offwhite-dining-pano.png" },
+    image: { name: "offwhite-dining-pano.jpg" },
     eyebrow: "Reservations",
     headline: "Reserve A Table",
     tagline: "Good food. Warm ambience. Memories to be made.",
@@ -131,12 +130,14 @@ export const DEFAULT_RESERVATIONS: ReservationsContent = {
   settings: {
     whatsappNumber: "918767811778",
     whatsappDisplay: "+91 87678 11778",
-    whatsappPrefill: "Hi, I'd like to reserve a table at The Off White.",
+    whatsappPrefill:
+      "Hi! I’d like to reserve a table at Off White. Could you please help me with the reservation?",
     confirmationMessage:
       "Thank you for your reservation. We'll confirm your table shortly.",
   },
 };
 
+/** Used by Operations → Reservations only (not the page CMS editor). */
 export const DEFAULT_INBOX: ReservationSubmission[] = [
   {
     id: "res-1",
