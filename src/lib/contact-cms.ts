@@ -44,6 +44,8 @@ const SETTINGS_KEYS = [
   "phone_primary",
   "email_primary",
   "contact_hours_text",
+  "footer_hours_weekday",
+  "footer_hours_weekend",
   "google_maps_url",
   "google_maps_embed_url",
   "enquiry_confirmation_message",
@@ -91,8 +93,13 @@ function settingsFromRows(
     pincode: map.pincode || DEFAULT_SITE_SETTINGS.pincode,
     phoneDisplay: map.phone_display || DEFAULT_SITE_SETTINGS.phoneDisplay,
     phonePrimary: map.phone_primary || DEFAULT_SITE_SETTINGS.phonePrimary,
-    emailPrimary: map.email_primary || DEFAULT_SITE_SETTINGS.emailPrimary,
+    emailPrimary:
+      map.email_primary && map.email_primary !== "hello@theoffwhite.in"
+        ? map.email_primary
+        : DEFAULT_SITE_SETTINGS.emailPrimary,
     hoursText: map.contact_hours_text || DEFAULT_SITE_SETTINGS.hoursText,
+    footerHoursWeekday: map.footer_hours_weekday || DEFAULT_SITE_SETTINGS.footerHoursWeekday,
+    footerHoursWeekend: map.footer_hours_weekend || DEFAULT_SITE_SETTINGS.footerHoursWeekend,
     googleMapsUrl: map.google_maps_url || DEFAULT_SITE_SETTINGS.googleMapsUrl,
     googleMapsEmbedUrl: map.google_maps_embed_url || DEFAULT_SITE_SETTINGS.googleMapsEmbedUrl,
     enquiryConfirmationMessage:
@@ -116,6 +123,16 @@ async function saveSiteSettingsToDb(settings: SiteSettings) {
     { key: "phone_primary", value: settings.phonePrimary, description: "Primary phone" },
     { key: "email_primary", value: settings.emailPrimary, description: "Primary email" },
     { key: "contact_hours_text", value: settings.hoursText, description: "Contact hours" },
+    {
+      key: "footer_hours_weekday",
+      value: settings.footerHoursWeekday,
+      description: "Footer hours Mon–Thu",
+    },
+    {
+      key: "footer_hours_weekend",
+      value: settings.footerHoursWeekend,
+      description: "Footer hours Fri–Sun",
+    },
     { key: "google_maps_url", value: settings.googleMapsUrl, description: "Google Maps URL" },
     {
       key: "google_maps_embed_url",

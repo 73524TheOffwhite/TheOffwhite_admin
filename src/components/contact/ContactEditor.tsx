@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -12,9 +11,7 @@ import {
 import {
   CONTACT_SECTIONS,
   DEFAULT_CONTACT,
-  DEFAULT_CONTACT_ENQUIRIES,
   type ContactContent,
-  type ContactEnquiry,
 } from "@/data/contact-content";
 import {
   getSiteSettings,
@@ -22,15 +19,12 @@ import {
   useSharedSiteSettings,
 } from "@/data/shared-site-settings";
 import { loadContactCms, saveContactCms } from "@/lib/contact-cms";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function ContactEditor() {
   const [content, setContent] = useState<ContactContent>(DEFAULT_CONTACT);
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(DEFAULT_CONTACT));
-  const [enquiries, setEnquiries] = useState<ContactEnquiry[]>(DEFAULT_CONTACT_ENQUIRIES);
   const [active, setActive] = useState("settings");
-  const [inboxFilter, setInboxFilter] = useState<"all" | "new" | "replied" | "closed" | "private_event" | "level5_booking">("all");
   const { settings, setSettings, dirty: settingsDirty, save: saveSettingsLocal } = useSharedSiteSettings();
   const [pageId, setPageId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
@@ -88,14 +82,6 @@ export default function ContactEditor() {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const filtered = enquiries.filter((e) => {
-    if (inboxFilter === "all") return true;
-    if (inboxFilter === "private_event" || inboxFilter === "level5_booking") {
-      return e.type === inboxFilter;
-    }
-    return e.status === inboxFilter;
-  });
-
   return (
     <EditorShell
       title="Contact content"
@@ -104,7 +90,7 @@ export default function ContactEditor() {
           ? "Loading from Supabase…"
           : saving
             ? "Saving…"
-            : "Site-wide settings, Contact page media/copy, and enquiries inbox."
+            : "Site-wide settings and Contact page media/copy."
       }
       dirty={dirty}
       busy={loading || saving}
@@ -121,7 +107,7 @@ export default function ContactEditor() {
         priority="High"
       >
         <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2.5 text-xs text-muted-foreground">
-          These values power the Contact info grid and appear across the public site (WhatsApp, footers, Level 5 enquiry panel, etc.).
+          These values power the Contact info grid, footer Contact block, footer map, and opening hours on the public site.
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Address line 1">
@@ -172,10 +158,22 @@ export default function ContactEditor() {
               onChange={(e) => setSettings({ ...settings, emailPrimary: e.target.value })}
             />
           </Field>
-          <Field label="Hours text" className="sm:col-span-2">
+          <Field label="Contact page hours" className="sm:col-span-2" hint="Info grid — e.g. 12:00 PM – 11:00 PM (All Days)">
             <Input
               value={settings.hoursText}
               onChange={(e) => setSettings({ ...settings, hoursText: e.target.value })}
+            />
+          </Field>
+          <Field label="Footer hours — Mon–Thu" hint="Opening Hours column">
+            <Input
+              value={settings.footerHoursWeekday}
+              onChange={(e) => setSettings({ ...settings, footerHoursWeekday: e.target.value })}
+            />
+          </Field>
+          <Field label="Footer hours — Fri–Sun" hint="Opening Hours column">
+            <Input
+              value={settings.footerHoursWeekend}
+              onChange={(e) => setSettings({ ...settings, footerHoursWeekend: e.target.value })}
             />
           </Field>
           <Field label="Google Maps URL" className="sm:col-span-2">
@@ -292,7 +290,10 @@ export default function ContactEditor() {
             </p>
             <p>{settings.phoneDisplay}</p>
             <p>{settings.emailPrimary}</p>
-            <p>{settings.hoursText}</p>
+            <p>Contact hours: {settings.hoursText}</p>
+            <p>
+              Footer: Mon–Thu {settings.footerHoursWeekday} · Fri–Sun {settings.footerHoursWeekend}
+            </p>
           </div>
         </div>
       </SectionCard>
@@ -603,107 +604,9 @@ export default function ContactEditor() {
           </Field>
         </div>
         <p className="text-xs text-muted-foreground">
-          Submits as <code className="text-[11px]">private_event</code> or{" "}
-          <code className="text-[11px]">level5_booking</code>. Level 5 prefills via{" "}
+          Live form opens WhatsApp. Level 5 can prefill via{" "}
           <code className="text-[11px]">sessionStorage.level5-enquiry</code>.
         </p>
-      </SectionCard>
-
-      {/* 6. Inbox */}
-      <SectionCard
-        id="inbox"
-        title="Enquiries inbox"
-        layout="Contact + Level 5 submissions — view / reply / status"
-        priority="High"
-      >
-        <div className="flex flex-wrap gap-1.5">
-          {(
-            ["all", "new", "replied", "closed", "private_event", "level5_booking"] as const
-          ).map((f) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => setInboxFilter(f)}
-              className={cn(
-                "rounded-full px-3 py-1 text-xs font-medium border",
-                inboxFilter === f
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-card border-border text-foreground/70 hover:bg-muted",
-              )}
-            >
-              {f === "private_event"
-                ? "Contact"
-                : f === "level5_booking"
-                  ? "Level 5"
-                  : f}
-            </button>
-          ))}
-        </div>
-
-        <ul className="rounded-xl border border-border divide-y divide-border overflow-hidden">
-          {filtered.map((row) => (
-            <li key={row.id} className="p-3 sm:p-4 space-y-2">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold">{row.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {row.email} · {row.type === "level5_booking" ? "Level 5" : "Contact"}
-                  </p>
-                </div>
-                <span
-                  className={cn(
-                    "rounded-full px-2.5 py-0.5 text-[10px] font-semibold capitalize",
-                    row.status === "new" && "bg-amber-100 text-amber-800",
-                    row.status === "replied" && "bg-emerald-100 text-emerald-700",
-                    row.status === "closed" && "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {row.status}
-                </span>
-              </div>
-              <p className="text-sm">
-                {row.occasion || "—"} · {row.date || "—"} · {row.guests || "—"} guests
-              </p>
-              {row.message ? (
-                <p className="text-xs text-muted-foreground">{row.message}</p>
-              ) : null}
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    setEnquiries((list) =>
-                      list.map((e) => (e.id === row.id ? { ...e, status: "replied" } : e)),
-                    )
-                  }
-                >
-                  Mark replied
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() =>
-                    setEnquiries((list) =>
-                      list.map((e) => (e.id === row.id ? { ...e, status: "closed" } : e)),
-                    )
-                  }
-                >
-                  Close
-                </Button>
-                <Button type="button" size="sm" variant="ghost" asChild>
-                  <a href={`mailto:${row.email}`}>Reply by email</a>
-                </Button>
-              </div>
-            </li>
-          ))}
-          {filtered.length === 0 ? (
-            <li className="px-4 py-10 text-center text-xs text-muted-foreground">
-              No enquiries in this filter.
-            </li>
-          ) : null}
-        </ul>
       </SectionCard>
     </EditorShell>
   );

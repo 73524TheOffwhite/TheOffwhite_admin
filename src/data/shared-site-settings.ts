@@ -10,11 +10,14 @@ export type SiteSettings = {
   phonePrimary: string;
   emailPrimary: string;
   hoursText: string;
+  footerHoursWeekday: string;
+  footerHoursWeekend: string;
   googleMapsUrl: string;
   googleMapsEmbedUrl: string;
   enquiryConfirmationMessage: string;
 };
 
+/** Defaults match live theoffwhite.com Contact + Footer. */
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   addressLine1: "Sitara Atrium, 4th Floor, Sitara Building",
   addressLine2: "Colmorod, Navelim Highway, Sanscar Society",
@@ -23,8 +26,10 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   pincode: "403601",
   phoneDisplay: "+91 87678 11778",
   phonePrimary: "+918767811778",
-  emailPrimary: "hello@theoffwhite.in",
+  emailPrimary: "info@theoffwhite.com",
   hoursText: "12:00 PM – 11:00 PM (All Days)",
+  footerHoursWeekday: "12:00 PM – 11:00 PM",
+  footerHoursWeekend: "12:00 PM – 11:00 PM",
   googleMapsUrl: "https://maps.app.goo.gl/jvHLryG1k2ZpDUfQ6",
   googleMapsEmbedUrl:
     "https://maps.google.com/maps?q=15.2619293,73.9632973&z=17&ie=UTF8&output=embed",
